@@ -7,7 +7,7 @@
     <groupId>com.jd.joyqueue</groupId>
     <artifactId>laf-vertx</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.18</version>
+    <version>1.0.19</version>
     <name>Laf Vertx ${project.version}</name>
     <url>https://github.com/jd-middleware/laf-vertx</url>
     <description>A new vertx web framework with flexible configuration and plugin </description>

@@ -1,10 +1,6 @@
 package com.jd.laf.web.vertx.config;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
 import javax.xml.bind.annotation.*;
-import java.io.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -87,97 +83,43 @@ public class VertxConfig {
     }
 
     /**
-     * 构造器
+     * 处理继承
+     *
+     * @param config
+     * @return
      */
-    public static class Builder {
-
-        /**
-         * 构造配置，没有处理继承
-         *
-         * @param reader
-         * @return
-         * @throws JAXBException
-         */
-        public static VertxConfig build(final Reader reader) throws JAXBException {
-            JAXBContext context = JAXBContext.newInstance(RouteConfig.class, RouteType.class, VertxConfig.class);
-            Unmarshaller unmarshaller = context.createUnmarshaller();
-            return (VertxConfig) unmarshaller.unmarshal(reader);
+    public static VertxConfig inherit(final VertxConfig config) {
+        if (config == null) {
+            return null;
         }
-
-        /**
-         * 构造配置，没有处理继承
-         *
-         * @throws IOException
-         * @throws JAXBException
-         */
-        public static VertxConfig build(String file) throws IOException, JAXBException {
-            if (file == null || file.isEmpty()) {
-                throw new IllegalStateException("file can not be empty.");
-            }
-            InputStream in;
-            BufferedReader reader = null;
-            try {
-                File f = new File(file);
-                if (f.exists()) {
-                    in = new FileInputStream(f);
-                } else {
-                    in = Thread.currentThread().getContextClassLoader().getResourceAsStream(file);
-                    if (in == null) {
-                        in = VertxConfig.class.getClassLoader().getResourceAsStream(file);
-                        if (in == null) {
-                            throw new IOException("file is not found. " + file);
-                        }
-                    }
-                }
-                reader = new BufferedReader(new InputStreamReader(in));
-                return build(reader);
-            } finally {
-                if (reader != null) {
-                    reader.close();
-                }
-            }
+        List<RouteConfig> routes = config.getRoutes();
+        if (routes == null || routes.isEmpty()) {
+            return config;
         }
-
-        /**
-         * 处理继承
-         *
-         * @param config
-         * @return
-         */
-        public static VertxConfig inherit(final VertxConfig config) {
-            if (config == null) {
-                return null;
-            }
-            List<RouteConfig> routes = config.getRoutes();
-            if (routes == null || routes.isEmpty()) {
-                return config;
-            }
-            LinkedList<RouteConfig> inherits = config.getRoutes().stream().
-                    filter(a -> !a.isRoute() && a.getInherit() != null && !a.getInherit().isEmpty()).
-                    collect(Collectors.toCollection(LinkedList::new));
-            if (inherits == null || inherits.isEmpty()) {
-                return config;
-            }
-
-            Map<String, RouteConfig> map = config.getRoutes().stream().filter(a -> a.getName() != null)
-                    .collect(Collectors.toMap(a -> a.getName(), a -> a));
-            RouteConfig parent;
-            //当前节点遍历过的节点，防止递归
-            Set<RouteConfig> graph = new HashSet<>(map.size());
-            for (RouteConfig cfg : inherits) {
-                //获取当前节点
-                parent = map.get(cfg.getInherit());
-                //清理当前节点遍历过的节点
-                graph.clear();
-                graph.add(cfg);
-                while (parent != null && graph.add(parent)) {
-                    cfg.inherit(parent);
-                    parent = parent.getInherit() == null || parent.getInherit().isEmpty() ? null : map.get(parent.getInherit());
-                }
-            }
+        LinkedList<RouteConfig> inherits = config.getRoutes().stream().
+                filter(a -> !a.isRoute() && a.getInherit() != null && !a.getInherit().isEmpty()).
+                collect(Collectors.toCollection(LinkedList::new));
+        if (inherits == null || inherits.isEmpty()) {
             return config;
         }
 
+        Map<String, RouteConfig> map = config.getRoutes().stream().filter(a -> a.getName() != null)
+                .collect(Collectors.toMap(a -> a.getName(), a -> a));
+        RouteConfig parent;
+        //当前节点遍历过的节点，防止递归
+        Set<RouteConfig> graph = new HashSet<>(map.size());
+        for (RouteConfig cfg : inherits) {
+            //获取当前节点
+            parent = map.get(cfg.getInherit());
+            //清理当前节点遍历过的节点
+            graph.clear();
+            graph.add(cfg);
+            while (parent != null && graph.add(parent)) {
+                cfg.inherit(parent);
+                parent = parent.getInherit() == null || parent.getInherit().isEmpty() ? null : map.get(parent.getInherit());
+            }
+        }
+        return config;
     }
 
 }

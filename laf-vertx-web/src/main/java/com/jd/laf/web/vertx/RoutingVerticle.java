@@ -5,9 +5,7 @@ import com.jd.laf.binding.reflect.PropertySupplier.AbstractSupplier;
 import com.jd.laf.binding.reflect.exception.ReflectionException;
 import com.jd.laf.extension.ExtensionMeta;
 import com.jd.laf.web.vertx.annotation.Path;
-import com.jd.laf.web.vertx.config.RouteConfig;
-import com.jd.laf.web.vertx.config.RouteType;
-import com.jd.laf.web.vertx.config.VertxConfig;
+import com.jd.laf.web.vertx.config.*;
 import com.jd.laf.web.vertx.lifecycle.Registrar;
 import com.jd.laf.web.vertx.message.RouteMessage;
 import com.jd.laf.web.vertx.pool.Pool;
@@ -39,16 +37,13 @@ import java.util.concurrent.atomic.AtomicLong;
 import static com.jd.laf.web.vertx.Environment.COMMAND_POOL_CAPACITY;
 import static com.jd.laf.web.vertx.Environment.COMMAND_POOL_INITIALIZE_SIZE;
 import static com.jd.laf.web.vertx.Plugin.*;
-import static com.jd.laf.web.vertx.config.VertxConfig.Builder.build;
-import static com.jd.laf.web.vertx.config.VertxConfig.Builder.inherit;
 import static com.jd.laf.web.vertx.handler.RenderHandler.render;
 
 /**
  * 路由装配件
  */
 public class RoutingVerticle extends AbstractVerticle {
-    public static final String ROUTING_CONFIG_FILE = "vertx.file";
-    public static final String DEFAULT_ROUTING_CONFIG_FILE = "routing.xml";
+
     public static final int DEFAULT_PORT = 8080;
     protected static final Logger logger = LoggerFactory.getLogger(RoutingVerticle.class);
     protected static final AtomicLong counter = new AtomicLong(0);
@@ -57,8 +52,8 @@ public class RoutingVerticle extends AbstractVerticle {
     protected Environment env;
     //HTTP选项
     protected HttpServerOptions httpOptions;
-    //资源文件
-    protected String file;
+    //资源文件 build
+    protected RouterBuilder routerBuilder;
     //路由配置提供者
     protected List<RouteProvider> providers;
     protected MessageConsumer consumer;
@@ -73,50 +68,50 @@ public class RoutingVerticle extends AbstractVerticle {
     protected long id;
 
     public RoutingVerticle() {
-        this(new Environment.MapEnvironment(), new HttpServerOptions().setPort(DEFAULT_PORT), DEFAULT_ROUTING_CONFIG_FILE, null);
+        this(new Environment.MapEnvironment(), new HttpServerOptions().setPort(DEFAULT_PORT), null, null);
     }
 
     public RoutingVerticle(final Environment env) {
-        this(env, new HttpServerOptions().setPort(DEFAULT_PORT), DEFAULT_ROUTING_CONFIG_FILE, null);
+        this(env, new HttpServerOptions().setPort(DEFAULT_PORT), null, null);
     }
 
     public RoutingVerticle(final Environment env, final HttpServerOptions httpOptions) {
-        this(env, httpOptions, DEFAULT_ROUTING_CONFIG_FILE, null);
+        this(env, httpOptions, null, null);
     }
 
-    public RoutingVerticle(final Environment env, final HttpServerOptions httpOptions, final String file) {
-        this(env, httpOptions, file, null);
+    public RoutingVerticle(final Environment env, final HttpServerOptions httpOptions, final RouterBuilder routerBuilder) {
+        this(env, httpOptions, routerBuilder, null);
     }
 
-    public RoutingVerticle(final Environment env, final HttpServerOptions httpOptions, final String file, final List<RouteProvider> providers) {
+    public RoutingVerticle(final Environment env, final HttpServerOptions httpOptions, final RouterBuilder routerBuilder, final List<RouteProvider> providers) {
         this.env = env != null ? env : new Environment.MapEnvironment();
         this.httpOptions = httpOptions == null ? new HttpServerOptions().setPort(DEFAULT_PORT) : httpOptions;
-        this.file = file != null ? file : env.getString(ROUTING_CONFIG_FILE, DEFAULT_ROUTING_CONFIG_FILE);
+        this.routerBuilder = routerBuilder != null ? routerBuilder : new XmlRouterBuilder();
         this.providers = providers;
         this.id = counter.incrementAndGet();
     }
 
     public RoutingVerticle(final Map<String, Object> parameters) {
-        this(new Environment.MapEnvironment(parameters), new HttpServerOptions().setPort(DEFAULT_PORT), DEFAULT_ROUTING_CONFIG_FILE, null);
+        this(new Environment.MapEnvironment(parameters), new HttpServerOptions().setPort(DEFAULT_PORT),null, null);
     }
 
     public RoutingVerticle(final Map<String, Object> parameters, final HttpServerOptions httpOptions) {
-        this(new Environment.MapEnvironment(parameters), httpOptions, DEFAULT_ROUTING_CONFIG_FILE, null);
+        this(new Environment.MapEnvironment(parameters), httpOptions, null, null);
     }
 
-    public RoutingVerticle(final Map<String, Object> parameters, final HttpServerOptions httpOptions, final String file) {
-        this(new Environment.MapEnvironment(parameters), httpOptions, file, null);
+    public RoutingVerticle(final Map<String, Object> parameters, final HttpServerOptions httpOptions, final RouterBuilder routerBuilder) {
+        this(new Environment.MapEnvironment(parameters), httpOptions, routerBuilder, null);
     }
 
-    public RoutingVerticle(final Map<String, Object> parameters, final HttpServerOptions httpOptions, final String file, final List<RouteProvider> providers) {
-        this(new Environment.MapEnvironment(parameters), httpOptions, file, providers);
+    public RoutingVerticle(final Map<String, Object> parameters, final HttpServerOptions httpOptions, final RouterBuilder routerBuilder, final List<RouteProvider> providers) {
+        this(new Environment.MapEnvironment(parameters), httpOptions, routerBuilder, providers);
     }
 
     @Override
     public void start() throws Exception {
         try {
             //构建配置数据
-            config = inherit(build(file));
+            config = VertxConfig.inherit(routerBuilder.build());
 
             //初始化插件
             register(vertx, env, config);

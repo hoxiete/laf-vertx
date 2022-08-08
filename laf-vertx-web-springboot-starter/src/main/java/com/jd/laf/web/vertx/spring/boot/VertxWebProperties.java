@@ -1,5 +1,6 @@
 package com.jd.laf.web.vertx.spring.boot;
 
+import com.jd.laf.web.vertx.config.VertxConfig;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.http.ClientAuth;
 import io.vertx.core.http.Http2Settings;
@@ -11,7 +12,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 
-import static com.jd.laf.web.vertx.RoutingVerticle.DEFAULT_ROUTING_CONFIG_FILE;
 import static io.vertx.core.DeploymentOptions.*;
 import static io.vertx.core.VertxOptions.*;
 import static io.vertx.core.http.HttpServerOptions.*;
@@ -23,7 +23,7 @@ public class VertxWebProperties {
 
     protected DeploymentProperties routing = new DeploymentProperties();
 
-    protected String file = DEFAULT_ROUTING_CONFIG_FILE;
+    protected VertxConfig handler = new VertxConfig();
 
     protected HttpServerProperties http = new HttpServerProperties();
 
@@ -35,12 +35,12 @@ public class VertxWebProperties {
         this.routing = routing;
     }
 
-    public String getFile() {
-        return file;
+    public VertxConfig getHandler() {
+        return handler;
     }
 
-    public void setFile(String file) {
-        this.file = file;
+    public void setHandler(VertxConfig handler) {
+        this.handler = handler;
     }
 
     public HttpServerProperties getHttp() {
